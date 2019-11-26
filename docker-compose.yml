@@ -2,9 +2,16 @@ version: '2.2'
 
 services:
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:6.5.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.2.0
     environment:
-      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - "node.name=es-node"
+      - "discovery.type=single-node"
+      - "cluster.name=app-search-docker-cluster"
+      - "bootstrap.memory_lock=true"
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
     ports:
       - 9200:9200
     healthcheck:
@@ -13,7 +20,7 @@ services:
       timeout: 5s
       retries: 3
   kibana:
-    image: docker.elastic.co/kibana/kibana:6.5.0
+    image: docker.elastic.co/kibana/kibana:7.2.0
     ports:
       - 5601:5601
     healthcheck:
@@ -24,9 +31,20 @@ services:
     depends_on:
       elasticsearch: { condition: service_healthy }
   apm-server:
-    image: docker.elastic.co/apm/apm-server:6.5.0
+    image: docker.elastic.co/apm/apm-server:7.2.0
     ports:
       - 8200:8200
+    depends_on:
+      elasticsearch: { condition: service_healthy }
+      kibana: { condition: service_healthy }
+  app-search:
+    image: docker.elastic.co/app-search/app-search:7.2.0
+    environment:
+      - "elasticsearch.host=http:/localhost:9200"
+      - "allow_es_settings_modification=true"
+      - "JAVA_OPTS=-Xmx256m"
+    ports:
+      - 3002:3002  
     depends_on:
       elasticsearch: { condition: service_healthy }
       kibana: { condition: service_healthy }
